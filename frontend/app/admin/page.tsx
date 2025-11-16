@@ -5,6 +5,16 @@ import { useAuth } from "@/contexts/AuthContext";
 import { productAPI, Product } from "@/lib/api";
 import { useRouter } from "next/navigation";
 
+type FormState = {
+  sku: string;
+  name: string;
+  price: string; // keep as string while editing via inputs
+  category: string;
+  description: string;
+  image: string;
+  stock: string; // keep as string while editing via inputs
+};
+
 export default function AdminPage() {
   const { token, isAuthenticated, isAdmin } = useAuth();
   const router = useRouter();
@@ -12,7 +22,7 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<FormState>({
     sku: "",
     name: "",
     price: "",
@@ -28,6 +38,7 @@ export default function AdminPage() {
       return;
     }
     loadProducts();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated, isAdmin, token]);
 
   const loadProducts = async () => {
@@ -46,11 +57,35 @@ export default function AdminPage() {
     e.preventDefault();
     if (!token) return;
 
+    // Convert numeric fields from strings to numbers
+    const priceNum = parseFloat(formData.price);
+    const stockNum = parseInt(formData.stock || "0", 10);
+
+    // Basic validation
+    if (Number.isNaN(priceNum) || priceNum < 0) {
+      alert("Please enter a valid non-negative price.");
+      return;
+    }
+    if (Number.isNaN(stockNum) || stockNum < 0) {
+      alert("Please enter a valid non-negative integer for stock.");
+      return;
+    }
+
+    const payload: Partial<Product> = {
+      sku: formData.sku,
+      name: formData.name,
+      price: priceNum,
+      category: formData.category,
+      description: formData.description || undefined,
+      image: formData.image || undefined,
+      stock: stockNum,
+    };
+
     try {
       if (editingProduct) {
-        await productAPI.updateProduct(token, editingProduct._id, formData);
+        await productAPI.updateProduct(token, editingProduct._id, payload);
       } else {
-        await productAPI.createProduct(token, formData);
+        await productAPI.createProduct(token, payload);
       }
       setShowForm(false);
       setEditingProduct(null);
@@ -74,11 +109,11 @@ export default function AdminPage() {
     setFormData({
       sku: product.sku,
       name: product.name,
-      price: product.price.toString(),
+      price: String(product.price ?? ""),
       category: product.category,
       description: product.description || "",
       image: product.image || "",
-      stock: product.stock.toString(),
+      stock: String(product.stock ?? ""),
     });
     setShowForm(true);
   };
