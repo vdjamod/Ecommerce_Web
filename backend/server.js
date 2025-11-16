@@ -12,6 +12,9 @@ import reportRoutes from './routes/reports.js';
 
 // Load environment variables
 dotenv.config();
+console.log("DATABASE_URL =", process.env.DATABASE_URL);
+console.log("PGSSLMODE =", process.env.PGSSLMODE);
+
 
 const app = express();
 const PORT = process.env.PORT || 5000;
